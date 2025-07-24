@@ -1,0 +1,10 @@
+google-api-python-client
+python-dotenv
+newspaper3k
+openai
+selenium
+webdriver-manager
+stix2
+simple-term-menu
+fade
+lxml_html_clean

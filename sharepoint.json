@@ -1,0 +1,114 @@
+{
+  "google_dorks": [
+    {
+      "name": "SharePoint CVE-2025-53770 or 53771 Mentions",
+      "dork": "(\"CVE-2025-53770\" OR \"CVE-2025-53771\") site:{domain}"
+    },
+    {
+      "name": "SharePoint Webshell Artifacts",
+      "dork": "site:{domain} (inurl:spinstall0 OR inurl:ghost OR inurl:c0d3 OR inurl:warlock) inurl:.aspx"
+    },
+    {
+      "name": "Exploited SharePoint Endpoints",
+      "dork": "site:{domain} (inurl:_layouts OR inurl:_vti_bin OR inurl:ToolPane.aspx OR inurl:client.svc)"
+    },
+    {
+      "name": "Known Indicators from Exploitation",
+      "dork": "site:{domain} (\"X-SharePointHealthScore\" OR \"MSOWebPartPage_AnonymousAccess\" OR \"SPContextToken\")"
+    },
+    {
+      "name": "Exposed SharePoint Error Messages",
+      "dork": "site:{domain} (\"System.Web.Configuration.MachineKeySection\" OR \"System.Reflection.Assembly.Load(\")"
+    },
+    {
+      "name": "SharePoint Exploit Tool Signatures",
+      "dork": "site:{domain} (\"App_Web_spinstall0.aspx\" OR \"DisplayMode=Edit&a=/ToolPane.aspx\")"
+    },
+    {
+      "name": "YARA Signature References",
+      "dork": "(site:github.com OR site:pastebin.com) (\"CVE-2025-53770\" OR \"CVE-2025-53771\") (\"webshell\" OR \"yara\")"
+    },
+    {
+      "name": "Pastebin Dumps of Exploits or IOCs",
+      "dork": "site:pastebin.com \"sharepoint\" (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    },
+    {
+      "name": "Exploit PoC or Indicators from Security Blogs",
+      "dork": "(site:research.eye.security OR site:github.com OR site:blog.talosintelligence.com) \"sharepoint\" \"CVE-2025-53770\""
+    }
+  ],
+  "social_media_dorks": [
+    {
+      "name": "CVE Mentions on Twitter",
+      "dork": "site:twitter.com (\"CVE-2025-53770\" OR \"CVE-2025-53771\") sharepoint"
+    },
+    {
+      "name": "IOCs Shared on Twitter",
+      "dork": "site:twitter.com (\"IOCs\" OR \"indicators of compromise\" OR \"webshell\") (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    },
+    {
+      "name": "Proof-of-Concept (PoC) Chatter on Twitter",
+      "dork": "site:twitter.com (\"exploit\" OR \"PoC\" OR \"shell access\") (\"sharepoint\" AND \"CVE-2025-53770\")"
+    },
+    {
+      "name": "Security Researchers Tagging Indicators",
+      "dork": "site:twitter.com (\"Florian Roth\" OR \"Huntress\" OR \"eyeresearch\" OR \"@msftsec\") (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    },
+    {
+      "name": "Reddit Discussions: Exploitation Techniques",
+      "dork": "site:reddit.com (\"CVE-2025-53770\" OR \"CVE-2025-53771\") (\"webshell\" OR \"post-exploitation\" OR \"privilege escalation\")"
+    },
+    {
+      "name": "Reddit Leak Mentions",
+      "dork": "site:reddit.com (\"pastebin.com\" OR \"mega.nz\" OR \"anonfiles.com\") (\"sharepoint\" OR \"CVE-2025-53770\")"
+    },
+    {
+      "name": "Sysadmin Complaints or Suspicious Behavior",
+      "dork": "site:reddit.com (\"/r/sysadmin\") (\"CVE-2025-53770\" OR \"backdoor found\" OR \"unexpected outbound traffic\")"
+    },
+    {
+      "name": "StackOverflow: Exploit Detection and Hardening",
+      "dork": "site:stackoverflow.com (\"sharepoint\" (\"CVE-2025-53770\" OR \"CVE-2025-53771\") (\"patch\" OR \"exploit\" OR \"web.config\"))"
+    },
+    {
+      "name": "StackOverflow: SharePoint Custom Pages Acting Up",
+      "dork": "site:stackoverflow.com (\"ToolPane.aspx\" OR \"DisplayMode=Edit\" OR \"client.svc\") (\"unauthorized access\" OR \"shell\")"
+    },
+    {
+      "name": "LinkedIn Disclosures and Blog Teasers",
+      "dork": "site:linkedin.com/in/ (\"CVE-2025-53770\" OR \"CVE-2025-53771\") (\"write-up\" OR \"my latest blog\" OR \"exploit analysis\")"
+    },
+    {
+      "name": "LinkedIn Corporate Post-Mortems",
+      "dork": "site:linkedin.com/company/ (\"incident\" OR \"security advisory\" OR \"patching\" OR \"CVE-2025-53770\")"
+    },
+    {
+      "name": "Mastodon Researchers Discussing IOCs",
+      "dork": "site:infosec.exchange (\"webshell\" OR \"IOC dump\") (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    },
+    {
+      "name": "Telegram Indexing Leaked SharePoint Data",
+      "dork": "site:t.me sharepoint (\"CVE-2025-53770\" OR \"CVE-2025-53771\" OR \"webshell\")"
+    },
+    {
+      "name": "YouTube Exploit Demos",
+      "dork": "site:youtube.com (\"CVE-2025-53770\" OR \"CVE-2025-53771\") (\"exploit demo\" OR \"POC\" OR \"Metasploit\")"
+    }
+  ],
+  "metadata_dorks": [
+    {
+      "name": "Infected SharePoint PDFs with Metadata",
+      "dork": "site:{domain} filetype:pdf (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    },
+    {
+      "name": "Office Docs with Exploit Metadata",
+      "dork": "site:{domain} (filetype:docx OR filetype:xlsx OR filetype:pptx) sharepoint"
+    }
+  ],
+  "linkedin_search_dorks": [
+    {
+      "name": "Security Analysts Mentioning the CVE",
+      "dork": "site:linkedin.com/in/ -site:linkedin.com/in/unavailable -site:linkedin.com/in/dir/ (\"CVE-2025-53770\" OR \"CVE-2025-53771\")"
+    }
+  ]
+}
