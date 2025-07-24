@@ -48,6 +48,7 @@ graph TD
     end
 
 ```
+![PANHANDLR](https://raw.githubusercontent.com/haKC-ai/panhandlr/main/res/images/processing.png)
 
 ## Features
 
@@ -68,6 +69,8 @@ graph TD
     2.  A high-level, AI-generated technical summary of the threat landscape.
     3.  A machine-readable STIX 2.1 report for easy integration with security tools.
 -   **Automatic Defanging**: All relevant indicators in reports are automatically defanged (e.g., `http://` -> `hxxp://`, `example.com` -> `example[.]com`).
+
+![PANHANDLR](https://raw.githubusercontent.com/haKC-ai/panhandlr/main/res/images/analysis.png)
 
 ## Setup & Installation
 
