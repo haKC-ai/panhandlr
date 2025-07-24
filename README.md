@@ -1,6 +1,6 @@
-# Panhandlr: Dork-to-IOC Threat Intelligence Orchestrator
-
-```
+<p align="center">
+  <img src="https://raw.githubusercontent.com/haKC-ai/panhandlr/main/res/images/PANHANDLR.png" alt="PANHANDLR Logo">
+</p>
 
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
@@ -22,7 +22,7 @@ graph TD
 
     subgraph Phase 1
         C --> C1{Select Dork File};
-        C1 --> C2[Use Existing .json]
+        C1 --> C2[Use Existing JSON];
         C1 --> C3[Create New via AI];
         C2 --> C4[Run Google Dorks];
         C3 --> C4;
@@ -37,14 +37,14 @@ graph TD
         D3 --> D5[Extract Text];
         D4 --> D5;
         D5 --> D6[Analyze Text with OpenAI];
-        D6 --> D7[Extract & Aggregate IOCs];
+        D6 --> D7[Extract and Aggregate IOCs];
         D7 --> D8[Generate Reports];
     end
-    
+
     subgraph Reports
-        D8 --> R1[Detailed IOCs (.csv)];
-        D8 --> R2[Technical Summary (.csv)];
-        D8 --> R3[STIX 2.1 Threat Report (.json)];
+        D8 --> R1[Detailed IOCs CSV];
+        D8 --> R2[Technical Summary CSV];
+        D8 --> R3[STIX 2.1 Threat Report JSON];
     end
 
 ```
