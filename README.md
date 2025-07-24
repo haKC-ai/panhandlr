@@ -5,7 +5,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 
-Panhandlr is an automated OSINT and threat intelligence gathering tool. It streamlines the process of turning Google Dorks into actionable Indicators of Compromise (IOCs) and structured threat reports. By leveraging the power of AI and web automation, Panhandlr moves from initial discovery to final analysis in a few simple steps.
+`AI powered OSINT pipeline that automates the transformation of Google Dorks into actionable threat intelligence and structured STIX 2.1 reports.`
 
 The tool operates in two main phases:
 1.  **Dorking**: Uses Google Dorks from a JSON file (or generates new ones with AI) to find potentially malicious or interesting URLs.
