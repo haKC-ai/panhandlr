@@ -1,0 +1,174 @@
+{
+  "google_dorks": [
+    {
+      "name": "ChatGPT Shared OpenAI API Keys",
+      "dork": "site:chatgpt.com/share (\"sk-\" OR \"sk-proj-\" OR \"OpenAI API key\")"
+    },
+    {
+      "name": "ChatGPT Legacy Shared OpenAI API Keys",
+      "dork": "site:chat.openai.com/share (\"sk-\" OR \"sk-proj-\" OR \"OpenAI API key\")"
+    },
+    {
+      "name": "ChatGPT Shared Cloud Secrets",
+      "dork": "site:chatgpt.com/share (\"AWS_SECRET_ACCESS_KEY\" OR \"AKIA\" OR \"GOOGLE_CLOUD_PROJECT\" OR \"gcloud auth\")"
+    },
+    {
+      "name": "ChatGPT Shared Credentials",
+      "dork": "site:chatgpt.com/share (\"username:\" OR \"password:\" OR \"login:\")"
+    },
+    {
+      "name": "ChatGPT OAuth and JWT Tokens",
+      "dork": "site:chatgpt.com/share (\"Authorization: Bearer\" OR \"eyJhbGciOiJI\" OR \"JWT\")"
+    },
+    {
+      "name": "ChatGPT PII Mentions",
+      "dork": "site:chatgpt.com/share (\"ssn=\" OR \"dob=\" OR \"account_number=\")"
+    },
+    {
+      "name": "ChatGPT Private Keys",
+      "dork": "site:chatgpt.com/share (\"-----BEGIN RSA PRIVATE KEY-----\" OR \"-----BEGIN PGP PRIVATE KEY BLOCK-----\")"
+    },
+    {
+      "name": "ChatGPT GitHub Tokens",
+      "dork": "site:chatgpt.com/share (\"ghp_\" OR \"github_pat_\" OR \"ghs_\")"
+    },
+    {
+      "name": "ChatGPT Internal Infrastructure",
+      "dork": "site:chatgpt.com/share (\"http://internal.\" OR \"https://intranet.\" OR \".corp\")"
+    },
+    {
+      "name": "ChatGPT Accidental Secret Disclosures",
+      "dork": "site:chatgpt.com/share (\"your secret is\" OR \"generated token:\" OR \"Here is your API key:\")"
+    },
+    {
+      "name": "Grok Shared Passwords or Secrets",
+      "dork": "site:grok.com/share (\"password\" OR \"credentials\" OR \"secret\")"
+    },
+    {
+      "name": "Grok Environment Files or Keys",
+      "dork": "site:grok.com/share (\".env\" OR \"sk-\" OR \"JWT\" OR \"Authorization: Bearer\")"
+    },
+    {
+      "name": "Grok SSH Keys",
+      "dork": "site:grok.com/share (\"BEGIN RSA PRIVATE KEY\" OR \"ssh-rsa\")"
+    },
+    {
+      "name": "Grok Internal Infrastructure",
+      "dork": "site:grok.com/share (\".corp\" OR \"intranet\" OR \"internal use only\")"
+    },
+    {
+      "name": "Perplexity Shared API Keys",
+      "dork": "site:perplexity.ai/search (\"sk-\" OR \"Authorization: Bearer\" OR \"openai.api_key\")"
+    },
+    {
+      "name": "Perplexity Database or Auth Info",
+      "dork": "site:perplexity.ai/search (\"DB_PASSWORD\" OR \"DATABASE_URL\" OR \"AUTH_SECRET\")"
+    },
+    {
+      "name": "Perplexity Customer Identifiers",
+      "dork": "site:perplexity.ai/search (\"customer_id=\" OR \"client_email\" OR \"ssn=\")"
+    },
+    {
+      "name": "Perplexity JWTs or OAuth Tokens",
+      "dork": "site:perplexity.ai/search (\"eyJhbGciOiJI\" OR \"oauth_token\" OR \"access_token\")"
+    },
+    {
+      "name": "Perplexity Internal Only Content",
+      "dork": "site:perplexity.ai/search (\"internal only\" OR \"do not distribute\" OR \"roadmap\")"
+    },
+    {
+      "name": "HuggingFace Spaces Access Tokens",
+      "dork": "site:huggingface.co/spaces (\"sk-proj-\" OR \"hf_\" OR \"Authorization: Bearer\")"
+    },
+    {
+      "name": "HuggingFace Spaces Private Models",
+      "dork": "site:huggingface.co/spaces (\"/models/private/\" OR \"not for distribution\")"
+    },
+    {
+      "name": "HuggingFace Spaces .env or Secrets",
+      "dork": "site:huggingface.co/spaces (\".env\" OR \"secret_key\" OR \"access_token\")"
+    },
+    {
+      "name": "HuggingFace Spaces Debug Output",
+      "dork": "site:huggingface.co/spaces (\"Traceback (most recent call last)\" OR \"print(\" OR \"debug=\")"
+    },
+    {
+      "name": "Poe Shared Authentication Secrets",
+      "dork": "site:poe.com/share (\"Bearer\" OR \"auth_token\" OR \"OAuth\")"
+    },
+    {
+      "name": "Character.ai Prompt Secrets",
+      "dork": "site:character.ai/chat (\"secret\" OR \"private\" OR \"internal\")"
+    },
+    {
+      "name": "Jan.ai Configuration Files",
+      "dork": "site:jan.ai/chat (\"config.yaml\" OR \"settings.json\" OR \".env\")"
+    },
+    {
+      "name": "You.com Keys or Tokens",
+      "dork": "site:you.com/search (\"access_token\" OR \"sk-\" OR \"secrets\")"
+    },
+    {
+      "name": "Gemini Shared Confidential Information",
+      "dork": "site:gemini.google.com/share (\"internal only\" OR \"token=\" OR \"confidential\")"
+    }
+  ],
+  "social_media_dorks": [
+    {
+      "name": "X Mentions of AI Share Links with Secrets",
+      "dork": "site:twitter.com (\"chatgpt.com/share\" OR \"grok.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\") (\"sk-\" OR \"password\" OR \"token\")"
+    },
+    {
+      "name": "Reddit Discussions About Leaked AI Shares",
+      "dork": "site:reddit.com (\"chatgpt.com/share\" OR \"grok.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\") (\"leaked\" OR \"credentials\" OR \"api key\")"
+    },
+    {
+      "name": "StackOverflow Questions Exposing Secrets",
+      "dork": "site:stackoverflow.com (\"chatgpt.com/share\" OR \"claude.ai/share\") (\"Authorization: Bearer\" OR \"sk-\")"
+    },
+    {
+      "name": "LinkedIn Posts Teasing Incident Writeups",
+      "dork": "site:linkedin.com/in/ (\"chatgpt.com/share\" OR \"grok.com/share\") (\"write-up\" OR \"post-mortem\" OR \"incident\")"
+    },
+    {
+      "name": "Mastodon Researchers Flagging Leaks",
+      "dork": "site:infosec.exchange (\"chatgpt.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\") (\"token\" OR \"secret\" OR \"PII\")"
+    },
+    {
+      "name": "Telegram Mentions of AI Share Leaks",
+      "dork": "site:t.me (\"chatgpt.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\") (\"api key\" OR \"dump\" OR \"leak\")"
+    },
+    {
+      "name": "YouTube Walkthroughs of AI Leak Hunting",
+      "dork": "site:youtube.com (\"Google dork\" OR \"dorking\") (\"chatgpt.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\")"
+    }
+  ],
+  "metadata_dorks": [
+    {
+      "name": "PDFs on ChatGPT Shares Referenced Externally",
+      "dork": "site:{domain} filetype:pdf (\"chatgpt.com/share\" OR \"chat.openai.com/share\")"
+    },
+    {
+      "name": "Office Docs Referencing AI Share Links",
+      "dork": "site:{domain} (filetype:docx OR filetype:xlsx OR filetype:pptx) (\"grok.com/share\" OR \"perplexity.ai/search\" OR \"huggingface.co/spaces\")"
+    },
+    {
+      "name": "Logs or JSON Referencing Tokens",
+      "dork": "site:{domain} (filetype:log OR filetype:json OR filetype:txt) (\"Authorization: Bearer\" OR \"ghp_\" OR \"hf_\")"
+    },
+    {
+      "name": "Config Files Linking To AI Shares",
+      "dork": "site:{domain} (filetype:yml OR filetype:yaml OR filetype:env) (\"chatgpt.com/share\" OR \"perplexity.ai/search\")"
+    }
+  ],
+  "linkedin_search_dorks": [
+    {
+      "name": "Engineers Admitting AI Share Use",
+      "dork": "site:linkedin.com/in/ -site:linkedin.com/in/unavailable -site:linkedin.com/in/dir/ (\"chatgpt.com/share\" OR \"grok.com/share\" OR \"perplexity.ai/search\")"
+    },
+    {
+      "name": "Company Posts Disclosing AI Prompting",
+      "dork": "site:linkedin.com/company/ (\"ChatGPT\" OR \"Claude\" OR \"Perplexity\" OR \"HuggingFace Spaces\") (\"policy\" OR \"DLP\" OR \"secrets\")"
+    }
+  ]
+}
