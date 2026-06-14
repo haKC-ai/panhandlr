@@ -7,6 +7,7 @@ from openai import OpenAI
 import fade
 
 from modules.google_dorks_standalone import analyze as run_google_dorks
+from modules.search_backends import run_all as run_multi_search, ALL_BACKENDS
 from modules.url2ioc import process_links_from_csv, generate_summary_and_stix_report
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -114,12 +115,49 @@ def run_dorking_phase():
     display_banner()
     action_menu = TerminalMenu(["[ Begin Search ]"], title=f"Using Dorks File: {os.path.basename(dorks_file_path)}")
     if action_menu.show() == 0:
-        print(fade.brazil("[*] Kicking off Google Dorks script..."))
+        # Backend selection
+        available = [name for name, cls in ALL_BACKENDS.items() if cls().is_available()]
+        backend_menu = TerminalMenu(
+            available + ["[ All Available ]"],
+            title="Select search backend(s)",
+            multi_select=True,
+            show_multi_select_hint=True,
+        )
+        backend_choice = backend_menu.show()
+        if backend_choice is None:
+            print("[!] Cancelled.")
+            input(fade.pinkred("\nPress Enter to return..."))
+            return
+
+        chosen_backends = None
+        if isinstance(backend_choice, (list, tuple)):
+            chosen = [available[i] for i in backend_choice if i < len(available)]
+            chosen_backends = chosen if chosen else None
+
         os.makedirs(ANALYSIS_DIR, exist_ok=True)
-        output_file = run_google_dorks(dorks_file_path=dorks_file_path, results_dir=ANALYSIS_DIR)
-        
+
+        # Load dork queries from file
+        with open(dorks_file_path) as f:
+            dork_data = json.load(f)
+        # Support both old format (google_dorks list) and new multi-category format (dorks list)
+        dork_queries = (
+            dork_data.get("dorks") or
+            dork_data.get("google_dorks") or
+            dork_data.get("social_media_dorks") or []
+        )
+        # Merge all categories for multi-backend
+        for key in ("social_media_dorks", "metadata_dorks", "linkedin_search_dorks"):
+            dork_queries += dork_data.get(key, [])
+
+        print(fade.brazil(f"[*] Running {len(dork_queries)} dork(s) across: {chosen_backends or available}"))
+        output_file = run_multi_search(
+            dork_queries=dork_queries,
+            results_dir=ANALYSIS_DIR,
+            backends=chosen_backends,
+        )
+
         if output_file:
-            print(fade.brazil(f"\n[+] Dorking complete! Please review the output file:"))
+            print(fade.brazil(f"\n[+] Search complete!"))
             print(fade.fire(f"   {output_file}"))
     else:
         print("[!] Search cancelled. Returning to main menu.")
