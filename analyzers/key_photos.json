@@ -3,70 +3,63 @@
   "description": "Find organic social media posts where people photograph their physical keys",
   "dorks": [
     {
-      "name": "reddit_key_photos",
+      "name": "reddit_native",
       "category": "social_media",
       "queries": [
-        "site:reddit.com \"my keys\" OR \"new keys\" OR \"found a key\" filetype:jpg",
-        "site:reddit.com/r/mildlyinteresting key",
-        "site:reddit.com/r/pics \"my key\" OR \"house key\" OR \"car key\"",
-        "site:reddit.com \"got my keys\" OR \"first set of keys\" -stock -shutterstock",
-        "site:reddit.com \"key cutting\" OR \"copy of my key\" image"
+        "my new house keys",
+        "got the keys to my new house",
+        "new apartment keys",
+        "my car key photo",
+        "house key copy made",
+        "office keys first day",
+        "accidentally used the wrong key"
       ]
     },
     {
-      "name": "linkedin_key_posts",
-      "category": "social_media",
+      "name": "google_reddit",
+      "category": "google",
+      "queries": [
+        "site:reddit.com/r/mildlyinteresting key photo",
+        "site:reddit.com \"my keys\" -\"lost my keys\" -\"locked out\"",
+        "site:reddit.com \"got my keys\" OR \"new keys\" OR \"house keys\" photo",
+        "site:reddit.com \"key\" \"first day\" photo",
+        "site:reddit.com/r/pics house key photo"
+      ]
+    },
+    {
+      "name": "google_linkedin",
+      "category": "google",
       "queries": [
         "site:linkedin.com \"got my keys\" OR \"received my keys\" OR \"new office keys\"",
         "site:linkedin.com \"first day\" keys photo",
         "site:linkedin.com \"handed the keys\" OR \"here are my keys\"",
-        "site:linkedin.com \"new home\" keys photo -stock"
+        "site:linkedin.com \"new home\" keys -stock"
       ]
     },
     {
-      "name": "twitter_key_photos",
-      "category": "social_media",
+      "name": "google_twitter",
+      "category": "google",
       "queries": [
         "site:twitter.com \"my keys\" photo -lost -found",
         "site:x.com \"new keys\" pic.twitter.com",
-        "site:twitter.com \"got the keys\" OR \"got my keys\" pic.twitter",
-        "site:x.com \"key cutting\" OR \"key copy\" photo"
+        "site:twitter.com \"got the keys\" pic.twitter"
       ]
     },
     {
-      "name": "facebook_instagram",
-      "category": "social_media",
-      "queries": [
-        "site:facebook.com \"got my keys\" OR \"new keys\" photo",
-        "site:instagram.com \"mykeys\" OR \"housekeys\" OR \"newkeys\"",
-        "site:instagram.com \"key\" \"just moved\" photo"
-      ]
-    },
-    {
-      "name": "image_hosting",
+      "name": "google_image_hosts",
       "category": "google",
       "queries": [
-        "site:imgur.com \"key\" house OR door OR office",
+        "site:imgur.com key house OR door OR office",
         "site:flickr.com \"house key\" OR \"door key\" photo",
-        "inurl:i.redd.it key",
-        "site:postimg.cc OR site:ibb.co key photograph"
-      ]
-    },
-    {
-      "name": "forums_classifieds",
-      "category": "google",
-      "queries": [
-        "site:craigslist.org \"key\" photo lost found",
-        "\"I found a key\" site:nextdoor.com OR site:reddit.com photo",
+        "site:postimg.cc key photograph",
         "\"duplicate key\" OR \"spare key\" photo filetype:jpg -site:shutterstock.com -site:getty.com"
       ]
     },
     {
-      "name": "metadata_dorks",
+      "name": "google_metadata",
       "category": "metadata",
       "queries": [
         "filetype:jpg \"key\" exif GPS",
-        "\"Canon\" OR \"iPhone\" filetype:jpg \"key\" site:reddit.com OR site:imgur.com",
         "filetype:jpg inurl:key -background -wallpaper -icon"
       ]
     }

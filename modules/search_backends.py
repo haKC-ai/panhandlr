@@ -31,6 +31,12 @@ REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                   "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
+
+# Reddit requires a descriptive user-agent or it 403s
+REDDIT_HEADERS = {
+    "User-Agent": "ghostkey-osint/1.0 (security research tool)",
+    "Accept": "application/json",
+}
 DEFAULT_RESULTS_DIR = "analysis"
 OUTPUT_CSV_HEADERS = ["dork", "title", "dork_url"]
 
@@ -161,63 +167,59 @@ class RedditBackend(SearchBackend):
         "movingtips", "homeowners", "DIY", "lockpicking",
     ]
 
+    @staticmethod
+    def _reddit_query(query: str) -> str:
+        """Strip Google-specific operators Reddit doesn't understand."""
+        import re
+        q = re.sub(r'site:\S+', '', query)
+        q = re.sub(r'filetype:\S+', '', q)
+        q = re.sub(r'inurl:\S+', '', q)
+        q = re.sub(r'intitle:\S+', '', q)
+        q = re.sub(r'\s+', ' ', q).strip().strip('"').strip()
+        return q or query  # fall back to original if we wiped everything
+
+    def _parse_posts(self, data: dict, dork_name: str, query: str, seen: set) -> list[dict]:
+        results = []
+        for child in data.get("data", {}).get("children", []):
+            post = child.get("data", {})
+            # Only include posts with images (url points to image or gallery)
+            post_url = post.get("url", "")
+            permalink = f"https://www.reddit.com{post.get('permalink', '')}"
+            if permalink in seen:
+                continue
+            seen.add(permalink)
+            results.append({
+                "dork": dork_name or query,
+                "title": post.get("title", ""),
+                "dork_url": permalink,
+                "image_url": post_url if post_url.endswith((".jpg", ".jpeg", ".png")) else "",
+                "score": post.get("score", 0),
+                "subreddit": post.get("subreddit", ""),
+            })
+        return results
+
     def search(self, query: str, dork_name: str = "") -> list[dict]:
         results = []
         seen = set()
+        reddit_q = self._reddit_query(query)
 
-        # Global Reddit search
+        if not reddit_q:
+            return results
+
+        # Global search only — per-subreddit hammering causes rate-limits
         try:
             resp = requests.get(
                 self.SEARCH_URL,
-                headers={**REQUEST_HEADERS, "Accept": "application/json"},
-                params={"q": query, "type": "link", "limit": 25, "sort": "relevance"},
-                timeout=10,
+                headers=REDDIT_HEADERS,
+                params={"q": reddit_q, "type": "link", "limit": 25,
+                        "sort": "top", "t": "all"},
+                timeout=15,
             )
             resp.raise_for_status()
-            for child in resp.json().get("data", {}).get("children", []):
-                post = child["data"]
-                url = f"https://www.reddit.com{post.get('permalink', '')}"
-                if url not in seen:
-                    seen.add(url)
-                    results.append({
-                        "dork": dork_name or query,
-                        "title": post.get("title", ""),
-                        "dork_url": url,
-                        "image_url": post.get("url", ""),  # direct image if post is image
-                        "score": post.get("score", 0),
-                        "subreddit": post.get("subreddit", ""),
-                    })
-            time.sleep(1.0)
+            results.extend(self._parse_posts(resp.json(), dork_name, query, seen))
+            time.sleep(2.0)  # Reddit rate limit: be polite
         except Exception as e:
-            logger.warning("[reddit] global search failed: %s", e)
-
-        # Per-subreddit search
-        for sub in self.TARGET_SUBS:
-            try:
-                resp = requests.get(
-                    self.SUBREDDIT_SEARCH.format(sub=sub),
-                    headers={**REQUEST_HEADERS, "Accept": "application/json"},
-                    params={"q": query, "restrict_sr": "on", "limit": 10,
-                            "sort": "top", "t": "all"},
-                    timeout=10,
-                )
-                resp.raise_for_status()
-                for child in resp.json().get("data", {}).get("children", []):
-                    post = child["data"]
-                    url = f"https://www.reddit.com{post.get('permalink', '')}"
-                    if url not in seen:
-                        seen.add(url)
-                        results.append({
-                            "dork": dork_name or query,
-                            "title": post.get("title", ""),
-                            "dork_url": url,
-                            "image_url": post.get("url", ""),
-                            "score": post.get("score", 0),
-                            "subreddit": sub,
-                        })
-                time.sleep(0.8)
-            except Exception as e:
-                logger.warning("[reddit] r/%s search failed: %s", sub, e)
+            logger.warning("[reddit] search failed for %r: %s", reddit_q[:60], e)
 
         return results
 
