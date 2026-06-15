@@ -251,7 +251,7 @@ class RedditBackend(SearchBackend):
                         # Search results — grab top permalinks (use a.search-title selector)
                         links = page.eval_on_selector_all(
                             'a.search-title',
-                            'els => els.slice(0, 15).map(e => e.href)'
+                            'els => els.slice(0, 5).map(e => e.href)'
                         )
                         # Second pass: navigate to each post, extract direct image URL
                         count = 0
@@ -293,11 +293,9 @@ class RedditBackend(SearchBackend):
         return results
 
     def search(self, query: str, dork_name: str = "") -> list[dict]:
-        clean_q = self._strip_google_ops(query)
-        if not clean_q:
-            return []
-        searches = [(clean_q, sub, dork_name) for sub in self.IMAGE_SUBS]
-        return self._browse_reddit(searches, set())
+        # No-op: per-dork search would multiply browser cost.
+        # search_native() in run_all covers Reddit coverage once.
+        return []
 
     def search_native(self) -> list[dict]:
         """Focused native scan — 2 best queries × 2 subs = 4 page loads, fast."""
