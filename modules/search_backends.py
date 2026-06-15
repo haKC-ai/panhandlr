@@ -248,24 +248,45 @@ class RedditBackend(SearchBackend):
                         page.wait_for_timeout(1200)
                         page.keyboard.press("End")
                         page.wait_for_timeout(800)
-                        links = page.eval_on_selector_all(
-                            'a[href*="/comments/"]',
+                        # Extract direct image URLs from thumbnails (iWorkThereToo style)
+                        # old.reddit shows <a class="thumbnail" href="IMAGE_URL"> for image posts
+                        img_urls = page.eval_on_selector_all(
+                            'a.thumbnail[href*="i.redd.it"], a.thumbnail[href*="imgur.com"], '
+                            'a.thumbnail[href*=".jpg"], a.thumbnail[href*=".jpeg"], a.thumbnail[href*=".png"]',
                             'els => [...new Set(els.map(e => e.href))]'
                         )
+                        # Also get post permalink + its thumbnail img src as fallback
+                        posts = page.eval_on_selector_all(
+                            'div.thing[data-url]',
+                            'els => els.map(e => ({url: e.getAttribute("data-url"), permalink: e.getAttribute("data-permalink")}))'
+                        )
                         count = 0
-                        for href in links:
-                            href = href.replace("old.reddit.com", "www.reddit.com")
-                            if "/comments/" not in href or href in seen:
+                        for img_url in img_urls:
+                            if img_url in seen:
                                 continue
-                            seen.add(href)
+                            seen.add(img_url)
                             results.append({
                                 "dork": dork_name or query,
-                                "title": f"Reddit: {query}",
-                                "dork_url": href,
+                                "title": f"Reddit image: {query}",
+                                "dork_url": img_url,
                                 "subreddit": subreddit,
                             })
                             count += 1
-                        logger.info("[reddit] r/%s '%s' → %d", subreddit, query[:30], count)
+                        for post in posts:
+                            data_url = post.get("url", "")
+                            if not data_url or data_url in seen:
+                                continue
+                            if any(data_url.endswith(ext) for ext in (".jpg", ".jpeg", ".png")) or \
+                               "i.redd.it" in data_url or "imgur.com" in data_url:
+                                seen.add(data_url)
+                                results.append({
+                                    "dork": dork_name or query,
+                                    "title": f"Reddit post image: {query}",
+                                    "dork_url": data_url,
+                                    "subreddit": subreddit,
+                                })
+                                count += 1
+                        logger.info("[reddit] r/%s '%s' → %d direct images", subreddit, query[:30], count)
                     except Exception as e:
                         logger.warning("[reddit] r/%s '%s' err: %s", subreddit, query[:30], e)
                 browser.close()
@@ -287,8 +308,6 @@ class RedditBackend(SearchBackend):
         top_subs = ["mildlyinteresting", "pics"]
         searches = [(q, sub, "reddit_native") for q in top_queries for sub in top_subs]
         return self._browse_reddit(searches, set())
-
-        return results
 
     def scroll_subreddit_images(self, query: str, dork_name: str = "") -> list[dict]:
         """
