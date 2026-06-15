@@ -223,62 +223,57 @@ class RedditBackend(SearchBackend):
     def _playwright_search(self, query: str, subreddit: str, dork_name: str, seen: set) -> list[dict]:
         """
         iWorkThereToo-style: real browser, scroll old.reddit.com, extract post links.
-        No API key, no rate limiting, no 403s.
+        Runs in a subprocess to avoid asyncio conflict when called from FastAPI.
         """
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError:
-            logger.warning("[reddit/playwright] playwright not installed")
-            return self._pullpush_search(query, None, dork_name, seen)
+        import subprocess, json as _json, sys as _sys
 
-        results = []
         url = (
             f"https://old.reddit.com/r/{subreddit}/search"
             f"?q={requests.utils.quote(query)}&restrict_sr=on&sort=top&t=all"
         )
 
+        script = f"""
+import json
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True, args=["--no-sandbox","--disable-dev-shm-usage"])
+    page = browser.new_page(user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0")
+    page.goto({url!r}, timeout=20000, wait_until="domcontentloaded")
+    page.wait_for_timeout(2000)
+    for _ in range(2):
+        page.keyboard.press("End")
+        page.wait_for_timeout(1500)
+    links = page.eval_on_selector_all('a[href*="/comments/"]', 'els => [...new Set(els.map(e => e.href))]')
+    browser.close()
+    print(json.dumps(links))
+"""
+
+        results = []
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
-                page = browser.new_page(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0"
-                )
-                page.goto(url, timeout=20000, wait_until="domcontentloaded")
-                page.wait_for_timeout(2000)
-
-                # Scroll twice like iWorkThereToo
-                for _ in range(2):
-                    page.keyboard.press("End")
-                    page.wait_for_timeout(1500)
-
-                # Extract post links
-                links = page.eval_on_selector_all(
-                    'a[href*="/comments/"]',
-                    'els => [...new Set(els.map(e => e.href))]'
-                )
-                browser.close()
-
+            proc = subprocess.run(
+                [_sys.executable, "-c", script],
+                capture_output=True, text=True, timeout=40
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(proc.stderr[:200])
+            links = _json.loads(proc.stdout.strip())
             for href in links:
                 if "/comments/" not in href:
                     continue
-                # Normalise to www.reddit.com
                 href = href.replace("old.reddit.com", "www.reddit.com")
                 if href in seen:
                     continue
                 seen.add(href)
                 results.append({
                     "dork": dork_name or query,
-                    "title": f"Reddit post: {query}",
+                    "title": f"Reddit: {query}",
                     "dork_url": href,
                     "subreddit": subreddit,
                 })
-
             logger.info("[reddit/playwright] r/%s | %r → %d posts", subreddit, query[:40], len(results))
-
         except Exception as e:
             logger.warning("[reddit/playwright] r/%s | %r failed: %s", subreddit, query[:40], e)
-            # Fallback to pullpush
-            results = self._pullpush_search(query, subreddit, dork_name, seen)
+            results = self._pullpush_search(query, None, dork_name, seen)
 
         return results
 
