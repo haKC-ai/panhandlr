@@ -97,7 +97,10 @@ class DuckDuckGoBackend(SearchBackend):
             return False
 
     def search(self, query: str, dork_name: str = "") -> list[dict]:
-        from duckduckgo_search import DDGS
+        try:
+            from duckduckgo_search import DDGS
+        except ImportError:
+            return []
         results = []
         try:
             with DDGS() as ddgs:
@@ -148,78 +151,106 @@ class BraveBackend(SearchBackend):
         return results
 
 
-# ── Reddit ────────────────────────────────────────────────────────────────────
+# ── Reddit via pullpush.io ────────────────────────────────────────────────────
 
 class RedditBackend(SearchBackend):
     """
-    No key needed. Uses Reddit's JSON search API.
-    Targets specific subreddits or global search.
-    Falls back to Selenium scroll for image-heavy posts.
+    Uses pullpush.io (Pushshift alternative) — no key, no 403s.
+    Searches by keyword + subreddit, filters for image posts only.
     """
     name = "reddit"
 
-    SEARCH_URL = "https://www.reddit.com/search.json"
-    SUBREDDIT_SEARCH = "https://www.reddit.com/r/{sub}/search.json"
+    PULLPUSH_URL = "https://api.pullpush.io/reddit/search/submission"
 
-    # Subreddits likely to have organic key photos
+    # High-yield subreddits for organic key photos
     TARGET_SUBS = [
-        "mildlyinteresting", "pics", "funny", "firstworldproblems",
-        "movingtips", "homeowners", "DIY", "lockpicking",
+        "mildlyinteresting", "pics", "firstworldproblems",
+        "homeowners", "movingtips", "DIY", "lockpicking", "newhome",
+    ]
+
+    # Queries that reliably surface key photos on Reddit
+    KEY_QUERIES = [
+        "got the keys new house",
+        "house keys photo",
+        "new apartment keys",
+        "closing day keys",
+        "accidentally used wrong key",
+        "keys fell",
+        "spare key made",
+        "office keys",
     ]
 
     @staticmethod
-    def _reddit_query(query: str) -> str:
-        """Strip Google-specific operators Reddit doesn't understand."""
+    def _strip_google_ops(query: str) -> str:
         import re
-        q = re.sub(r'site:\S+', '', query)
-        q = re.sub(r'filetype:\S+', '', q)
-        q = re.sub(r'inurl:\S+', '', q)
-        q = re.sub(r'intitle:\S+', '', q)
-        q = re.sub(r'\s+', ' ', q).strip().strip('"').strip()
-        return q or query  # fall back to original if we wiped everything
+        q = re.sub(r'\b\w+:\S+', '', query)
+        q = re.sub(r'\s+', ' ', q).strip().strip('"')
+        return q
 
-    def _parse_posts(self, data: dict, dork_name: str, query: str, seen: set) -> list[dict]:
+    def _pullpush_search(self, q: str, subreddit: str | None, dork_name: str, seen: set) -> list[dict]:
         results = []
-        for child in data.get("data", {}).get("children", []):
-            post = child.get("data", {})
-            # Only include posts with images (url points to image or gallery)
-            post_url = post.get("url", "")
-            permalink = f"https://www.reddit.com{post.get('permalink', '')}"
-            if permalink in seen:
-                continue
-            seen.add(permalink)
-            results.append({
-                "dork": dork_name or query,
-                "title": post.get("title", ""),
-                "dork_url": permalink,
-                "image_url": post_url if post_url.endswith((".jpg", ".jpeg", ".png")) else "",
-                "score": post.get("score", 0),
-                "subreddit": post.get("subreddit", ""),
-            })
+        params = {
+            "q": q,
+            "limit": 25,
+            "sort_type": "score",
+            "is_self": "false",  # image/link posts only
+        }
+        if subreddit:
+            params["subreddit"] = subreddit
+
+        try:
+            resp = requests.get(
+                self.PULLPUSH_URL,
+                params=params,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            for post in resp.json().get("data", []):
+                url = post.get("url", "")
+                permalink = f"https://www.reddit.com{post.get('permalink', '')}"
+                if permalink in seen:
+                    continue
+                # Only keep posts with actual image URLs or reddit gallery
+                if not (url.endswith((".jpg", ".jpeg", ".png")) or
+                        "i.redd.it" in url or "imgur.com" in url or
+                        "reddit.com/gallery" in url):
+                    continue
+                seen.add(permalink)
+                results.append({
+                    "dork": dork_name or q,
+                    "title": post.get("title", ""),
+                    "dork_url": url if url.endswith((".jpg", ".jpeg", ".png")) else permalink,
+                    "score": post.get("score", 0),
+                    "subreddit": post.get("subreddit", ""),
+                })
+            time.sleep(0.5)
+        except Exception as e:
+            logger.warning("[reddit/pullpush] %s|%s failed: %s", subreddit or "all", q[:40], e)
         return results
 
     def search(self, query: str, dork_name: str = "") -> list[dict]:
         results = []
         seen = set()
-        reddit_q = self._reddit_query(query)
+        clean_q = self._strip_google_ops(query)
 
-        if not reddit_q:
+        if not clean_q:
             return results
 
-        # Global search only — per-subreddit hammering causes rate-limits
-        try:
-            resp = requests.get(
-                self.SEARCH_URL,
-                headers=REDDIT_HEADERS,
-                params={"q": reddit_q, "type": "link", "limit": 25,
-                        "sort": "top", "t": "all"},
-                timeout=15,
-            )
-            resp.raise_for_status()
-            results.extend(self._parse_posts(resp.json(), dork_name, query, seen))
-            time.sleep(2.0)  # Reddit rate limit: be polite
-        except Exception as e:
-            logger.warning("[reddit] search failed for %r: %s", reddit_q[:60], e)
+        # Search across key subreddits
+        for sub in self.TARGET_SUBS:
+            results.extend(self._pullpush_search(clean_q, sub, dork_name, seen))
+
+        return results
+
+    def search_native(self) -> list[dict]:
+        """Proactive scan: run curated key queries across target subreddits."""
+        results = []
+        seen = set()
+        for q in self.KEY_QUERIES:
+            for sub in self.TARGET_SUBS:
+                results.extend(self._pullpush_search(q, sub, "reddit_native", seen))
+        return results
 
         return results
 
@@ -555,9 +586,20 @@ def run_all(
     all_results = []
     seen_urls = set()
 
+    # Always run Reddit native proactive scan first — guaranteed image results
+    reddit_b = next((b for b in active if isinstance(b, RedditBackend)), None)
+    if reddit_b:
+        logger.info("[search] running Reddit native key scan...")
+        for r in reddit_b.search_native():
+            url = r.get("dork_url", "")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                all_results.append(r)
+        logger.info("[search] Reddit native: %d results so far", len(all_results))
+
     for dork in dork_queries:
         name = dork.get("name", "")
-        # Support both old format (single "dork") and new key_photos.json format (list "queries")
+        category = dork.get("category", "")
         queries = dork.get("queries") or ([dork.get("dork")] if dork.get("dork") else [])
 
         for query in queries:
@@ -566,8 +608,18 @@ def run_all(
             if domain:
                 query = query.replace("{domain}", domain)
 
+            # Route by category: reddit_* queries only to Google/DDG/Brave (they handle site: ops)
+            # social_media category goes to Reddit native backend only
             for backend in active:
-                results = backend.search(query, dork_name=name)
+                if category == "social_media" and not isinstance(backend, RedditBackend):
+                    continue  # social_media queries are plain terms for Reddit
+                if category == "social_media" and isinstance(backend, RedditBackend):
+                    results = backend.search(query, dork_name=name)
+                elif isinstance(backend, RedditBackend):
+                    continue  # non-social_media dorks don't go to Reddit
+                else:
+                    results = backend.search(query, dork_name=name)
+
                 for r in results:
                     url = r.get("dork_url", "")
                     if url and url not in seen_urls:
