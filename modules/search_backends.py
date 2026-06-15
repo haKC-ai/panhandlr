@@ -220,82 +220,83 @@ class RedditBackend(SearchBackend):
                 logger.warning("[reddit/pullpush] %s failed: %s", q[:40], e)
         return results
 
-    def _playwright_search(self, query: str, subreddit: str, dork_name: str, seen: set) -> list[dict]:
+    def _run_all_playwright(self, searches: list[tuple[str, str, str]], seen: set) -> list[dict]:
         """
-        iWorkThereToo-style: real browser, scroll old.reddit.com, extract post links.
-        Runs in a subprocess to avoid asyncio conflict when called from FastAPI.
+        Launch ONE browser, run all searches in it, close.
+        searches = [(query, subreddit, dork_name), ...]
         """
-        import subprocess, json as _json, sys as _sys
+        import json as _json, subprocess as _sp, sys as _sys
 
-        url = (
-            f"https://old.reddit.com/r/{subreddit}/search"
-            f"?q={requests.utils.quote(query)}&restrict_sr=on&sort=top&t=all"
-        )
-
+        script_searches = _json.dumps(searches)
         script = f"""
 import json
 from playwright.sync_api import sync_playwright
+
+searches = json.loads({script_searches!r})
+results = []
+seen = set()
+
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, args=["--no-sandbox","--disable-dev-shm-usage"])
     page = browser.new_page(user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0")
-    page.goto({url!r}, timeout=20000, wait_until="domcontentloaded")
-    page.wait_for_timeout(2000)
-    for _ in range(2):
-        page.keyboard.press("End")
-        page.wait_for_timeout(1500)
-    links = page.eval_on_selector_all('a[href*="/comments/"]', 'els => [...new Set(els.map(e => e.href))]')
-    browser.close()
-    print(json.dumps(links))
-"""
 
-        results = []
+    for query, subreddit, dork_name in searches:
         try:
-            proc = subprocess.run(
-                [_sys.executable, "-c", script],
-                capture_output=True, text=True, timeout=40
-            )
-            if proc.returncode != 0:
-                raise RuntimeError(proc.stderr[:200])
-            links = _json.loads(proc.stdout.strip())
+            import urllib.parse
+            url = f"https://old.reddit.com/r/{{subreddit}}/search?q={{urllib.parse.quote(query)}}&restrict_sr=on&sort=top&t=all"
+            page.goto(url, timeout=20000, wait_until="domcontentloaded")
+            page.wait_for_timeout(1500)
+            for _ in range(2):
+                page.keyboard.press("End")
+                page.wait_for_timeout(1000)
+            links = page.eval_on_selector_all('a[href*="/comments/"]', 'els => [...new Set(els.map(e => e.href))]')
             for href in links:
-                if "/comments/" not in href:
-                    continue
-                href = href.replace("old.reddit.com", "www.reddit.com")
-                if href in seen:
+                if "/comments/" not in href or href in seen:
                     continue
                 seen.add(href)
-                results.append({
+                results.append({{
                     "dork": dork_name or query,
-                    "title": f"Reddit: {query}",
-                    "dork_url": href,
+                    "title": f"Reddit: {{query}} r/{{subreddit}}",
+                    "dork_url": href.replace("old.reddit.com", "www.reddit.com"),
                     "subreddit": subreddit,
-                })
-            logger.info("[reddit/playwright] r/%s | %r → %d posts", subreddit, query[:40], len(results))
+                }})
         except Exception as e:
-            logger.warning("[reddit/playwright] r/%s | %r failed: %s", subreddit, query[:40], e)
-            results = self._pullpush_search(query, None, dork_name, seen)
+            pass
 
-        return results
+    browser.close()
+
+print(json.dumps(results))
+"""
+        try:
+            proc = _sp.run([_sys.executable, "-c", script], capture_output=True, text=True, timeout=300)
+            if proc.returncode != 0:
+                raise RuntimeError(proc.stderr[-300:])
+            batch = _json.loads(proc.stdout.strip() or "[]")
+            results = []
+            for r in batch:
+                if r["dork_url"] not in seen:
+                    seen.add(r["dork_url"])
+                    results.append(r)
+            logger.info("[reddit/playwright] batch %d searches → %d posts", len(searches), len(results))
+            return results
+        except Exception as e:
+            logger.warning("[reddit/playwright] batch failed: %s", e)
+            return []
 
     def search(self, query: str, dork_name: str = "") -> list[dict]:
         clean_q = self._strip_google_ops(query)
         if not clean_q:
             return []
         seen = set()
-        results = []
-        for sub in self.IMAGE_SUBS:
-            results.extend(self._playwright_search(clean_q, sub, dork_name, seen))
-        return results
+        searches = [(clean_q, sub, dork_name) for sub in self.IMAGE_SUBS]
+        return self._run_all_playwright(searches, seen)
 
     def search_native(self) -> list[dict]:
-        """iWorkThereToo-style proactive scan: real browser, curated queries, target subs."""
-        results = []
-        seen = set()
+        """iWorkThereToo-style: one browser, all key queries × target subs."""
         subs = ["mildlyinteresting", "pics", "homeowners", "firstworldproblems"]
-        for q in self.KEY_QUERIES:
-            for sub in subs:
-                results.extend(self._playwright_search(q, sub, "reddit_native", seen))
-        return results
+        searches = [(q, sub, "reddit_native") for q in self.KEY_QUERIES for sub in subs]
+        seen = set()
+        return self._run_all_playwright(searches, seen)
 
         return results
 
