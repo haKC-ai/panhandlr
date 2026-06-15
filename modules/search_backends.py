@@ -162,23 +162,18 @@ class RedditBackend(SearchBackend):
 
     PULLPUSH_URL = "https://api.pullpush.io/reddit/search/submission"
 
-    # High-yield subreddits for organic key photos
-    TARGET_SUBS = [
-        "mildlyinteresting", "pics", "firstworldproblems",
-        "homeowners", "movingtips", "DIY", "lockpicking", "newhome",
-    ]
-
-    # Queries that reliably surface key photos on Reddit
+    # Best queries for surfacing physical key photos — global Reddit search
     KEY_QUERIES = [
         "got the keys new house",
         "house keys photo",
         "new apartment keys",
-        "closing day keys",
         "accidentally used wrong key",
-        "keys fell",
         "spare key made",
-        "office keys",
+        "closing day keys photo",
     ]
+
+    # Subreddits with highest key photo density — used only for targeted bonus pass
+    IMAGE_SUBS = ["mildlyinteresting", "pics", "homeowners"]
 
     @staticmethod
     def _strip_google_ops(query: str) -> str:
@@ -189,21 +184,14 @@ class RedditBackend(SearchBackend):
 
     def _pullpush_search(self, q: str, subreddit: str | None, dork_name: str, seen: set) -> list[dict]:
         results = []
-        params = {
-            "q": q,
-            "limit": 25,
-            "sort_type": "score",
-            "is_self": "false",  # image/link posts only
-        }
+        params = {"q": q, "limit": 25, "sort_type": "score", "is_self": "false"}
         if subreddit:
             params["subreddit"] = subreddit
 
         try:
             resp = requests.get(
-                self.PULLPUSH_URL,
-                params=params,
-                headers={"User-Agent": "Mozilla/5.0"},
-                timeout=15,
+                self.PULLPUSH_URL, params=params,
+                headers={"User-Agent": "Mozilla/5.0"}, timeout=15,
             )
             resp.raise_for_status()
             for post in resp.json().get("data", []):
@@ -211,7 +199,6 @@ class RedditBackend(SearchBackend):
                 permalink = f"https://www.reddit.com{post.get('permalink', '')}"
                 if permalink in seen:
                     continue
-                # Only keep posts with actual image URLs or reddit gallery
                 if not (url.endswith((".jpg", ".jpeg", ".png")) or
                         "i.redd.it" in url or "imgur.com" in url or
                         "reddit.com/gallery" in url):
@@ -224,32 +211,95 @@ class RedditBackend(SearchBackend):
                     "score": post.get("score", 0),
                     "subreddit": post.get("subreddit", ""),
                 })
-            time.sleep(0.5)
+            time.sleep(12)  # pullpush rate limit: ~5 req/min max
         except Exception as e:
-            logger.warning("[reddit/pullpush] %s|%s failed: %s", subreddit or "all", q[:40], e)
+            if "429" in str(e):
+                logger.warning("[reddit/pullpush] rate limited — sleeping 60s")
+                time.sleep(60)
+            else:
+                logger.warning("[reddit/pullpush] %s failed: %s", q[:40], e)
+        return results
+
+    def _playwright_search(self, query: str, subreddit: str, dork_name: str, seen: set) -> list[dict]:
+        """
+        iWorkThereToo-style: real browser, scroll old.reddit.com, extract post links.
+        No API key, no rate limiting, no 403s.
+        """
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            logger.warning("[reddit/playwright] playwright not installed")
+            return self._pullpush_search(query, None, dork_name, seen)
+
+        results = []
+        url = (
+            f"https://old.reddit.com/r/{subreddit}/search"
+            f"?q={requests.utils.quote(query)}&restrict_sr=on&sort=top&t=all"
+        )
+
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+                page = browser.new_page(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0"
+                )
+                page.goto(url, timeout=20000, wait_until="domcontentloaded")
+                page.wait_for_timeout(2000)
+
+                # Scroll twice like iWorkThereToo
+                for _ in range(2):
+                    page.keyboard.press("End")
+                    page.wait_for_timeout(1500)
+
+                # Extract post links
+                links = page.eval_on_selector_all(
+                    'a[href*="/comments/"]',
+                    'els => [...new Set(els.map(e => e.href))]'
+                )
+                browser.close()
+
+            for href in links:
+                if "/comments/" not in href:
+                    continue
+                # Normalise to www.reddit.com
+                href = href.replace("old.reddit.com", "www.reddit.com")
+                if href in seen:
+                    continue
+                seen.add(href)
+                results.append({
+                    "dork": dork_name or query,
+                    "title": f"Reddit post: {query}",
+                    "dork_url": href,
+                    "subreddit": subreddit,
+                })
+
+            logger.info("[reddit/playwright] r/%s | %r → %d posts", subreddit, query[:40], len(results))
+
+        except Exception as e:
+            logger.warning("[reddit/playwright] r/%s | %r failed: %s", subreddit, query[:40], e)
+            # Fallback to pullpush
+            results = self._pullpush_search(query, subreddit, dork_name, seen)
+
         return results
 
     def search(self, query: str, dork_name: str = "") -> list[dict]:
-        results = []
-        seen = set()
         clean_q = self._strip_google_ops(query)
-
         if not clean_q:
-            return results
-
-        # Search across key subreddits
-        for sub in self.TARGET_SUBS:
-            results.extend(self._pullpush_search(clean_q, sub, dork_name, seen))
-
+            return []
+        seen = set()
+        results = []
+        for sub in self.IMAGE_SUBS:
+            results.extend(self._playwright_search(clean_q, sub, dork_name, seen))
         return results
 
     def search_native(self) -> list[dict]:
-        """Proactive scan: run curated key queries across target subreddits."""
+        """iWorkThereToo-style proactive scan: real browser, curated queries, target subs."""
         results = []
         seen = set()
+        subs = ["mildlyinteresting", "pics", "homeowners", "firstworldproblems"]
         for q in self.KEY_QUERIES:
-            for sub in self.TARGET_SUBS:
-                results.extend(self._pullpush_search(q, sub, "reddit_native", seen))
+            for sub in subs:
+                results.extend(self._playwright_search(q, sub, "reddit_native", seen))
         return results
 
         return results
