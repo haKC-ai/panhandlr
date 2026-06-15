@@ -248,45 +248,42 @@ class RedditBackend(SearchBackend):
                         page.wait_for_timeout(1200)
                         page.keyboard.press("End")
                         page.wait_for_timeout(800)
-                        # Extract direct image URLs from thumbnails (iWorkThereToo style)
-                        # old.reddit shows <a class="thumbnail" href="IMAGE_URL"> for image posts
-                        img_urls = page.eval_on_selector_all(
-                            'a.thumbnail[href*="i.redd.it"], a.thumbnail[href*="imgur.com"], '
-                            'a.thumbnail[href*=".jpg"], a.thumbnail[href*=".jpeg"], a.thumbnail[href*=".png"]',
-                            'els => [...new Set(els.map(e => e.href))]'
+                        # Search results — grab top permalinks (use a.search-title selector)
+                        links = page.eval_on_selector_all(
+                            'a.search-title',
+                            'els => els.slice(0, 15).map(e => e.href)'
                         )
-                        # Also get post permalink + its thumbnail img src as fallback
-                        posts = page.eval_on_selector_all(
-                            'div.thing[data-url]',
-                            'els => els.map(e => ({url: e.getAttribute("data-url"), permalink: e.getAttribute("data-permalink")}))'
-                        )
+                        # Second pass: navigate to each post, extract direct image URL
                         count = 0
-                        for img_url in img_urls:
-                            if img_url in seen:
-                                continue
-                            seen.add(img_url)
-                            results.append({
-                                "dork": dork_name or query,
-                                "title": f"Reddit image: {query}",
-                                "dork_url": img_url,
-                                "subreddit": subreddit,
-                            })
-                            count += 1
-                        for post in posts:
-                            data_url = post.get("url", "")
-                            if not data_url or data_url in seen:
-                                continue
-                            if any(data_url.endswith(ext) for ext in (".jpg", ".jpeg", ".png")) or \
-                               "i.redd.it" in data_url or "imgur.com" in data_url:
-                                seen.add(data_url)
+                        for permalink in links:
+                            try:
+                                page.goto(permalink, timeout=10000, wait_until="domcontentloaded")
+                                page.wait_for_timeout(600)
+                                # On the post page, the title link href IS the image URL for link posts
+                                img_url = page.eval_on_selector(
+                                    'a.title',
+                                    'el => el ? el.href : null'
+                                )
+                                if not img_url:
+                                    continue
+                                # Filter: must be a real image URL
+                                if not (img_url.endswith((".jpg", ".jpeg", ".png", ".gif")) or
+                                        "i.redd.it" in img_url or "imgur.com" in img_url or
+                                        "i.imgur.com" in img_url):
+                                    continue
+                                if img_url in seen:
+                                    continue
+                                seen.add(img_url)
                                 results.append({
                                     "dork": dork_name or query,
-                                    "title": f"Reddit post image: {query}",
-                                    "dork_url": data_url,
+                                    "title": f"Reddit: {query}",
+                                    "dork_url": img_url,
                                     "subreddit": subreddit,
                                 })
                                 count += 1
-                        logger.info("[reddit] r/%s '%s' → %d direct images", subreddit, query[:30], count)
+                            except Exception:
+                                continue
+                        logger.info("[reddit] r/%s '%s' → %d images", subreddit, query[:30], count)
                     except Exception as e:
                         logger.warning("[reddit] r/%s '%s' err: %s", subreddit, query[:30], e)
                 browser.close()
