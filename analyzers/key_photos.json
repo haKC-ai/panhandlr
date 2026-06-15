@@ -3,46 +3,87 @@
   "description": "Find organic social media posts where people photograph their physical keys",
   "dorks": [
     {
+      "name": "instagram_keys_direct",
+      "category": "google",
+      "queries": [
+        "site:instagram.com (\"got the keys\" OR \"got our keys\")",
+        "site:instagram.com \"closing day\"",
+        "site:instagram.com \"officially homeowners\"",
+        "site:instagram.com \"new house keys\" OR \"new apartment keys\"",
+        "site:instagram.com \"finally got the keys\"",
+        "site:instagram.com \"picked up the keys\"",
+        "site:instagram.com \"first home\" keys",
+        "site:instagram.com \"just moved in\" keys"
+      ]
+    },
+    {
+      "name": "instagram_hashtags",
+      "category": "google",
+      "queries": [
+        "site:instagram.com \"#newhome\"",
+        "site:instagram.com \"#closingday\"",
+        "site:instagram.com \"#firsthome\"",
+        "site:instagram.com \"#homeowner\"",
+        "site:instagram.com \"#newapartment\"",
+        "site:instagram.com \"#housewarming\""
+      ]
+    },
+    {
+      "name": "instagram_no_reels",
+      "category": "google",
+      "queries": [
+        "site:instagram.com (\"got the keys\") -reel",
+        "site:instagram.com (\"closing day\") -reel",
+        "site:instagram.com (\"new home\") -reel keys",
+        "site:instagram.com (\"first home\") -reel keys"
+      ]
+    },
+    {
+      "name": "facebook_keys",
+      "category": "google",
+      "queries": [
+        "site:facebook.com \"officially homeowners\"",
+        "site:facebook.com \"closing day\" keys",
+        "site:facebook.com \"got the keys\" new home",
+        "site:facebook.com \"just moved in\" keys",
+        "site:facebook.com \"our new home\" keys"
+      ]
+    },
+    {
+      "name": "twitter_x_keys",
+      "category": "google",
+      "queries": [
+        "site:x.com \"officially homeowners\"",
+        "site:x.com \"closing day\" keys",
+        "site:x.com \"got the keys\" new house",
+        "site:x.com \"first home\" keys",
+        "site:x.com \"new house\" keys photo",
+        "site:twitter.com \"got the keys\" pic.twitter",
+        "site:twitter.com \"closing day\" pic.twitter"
+      ]
+    },
+    {
       "name": "reddit_native",
       "category": "social_media",
       "queries": [
-        "my new house keys",
-        "got the keys to my new house",
-        "new apartment keys",
-        "my car key photo",
+        "got the keys new house",
+        "new apartment keys photo",
+        "closing day keys",
+        "officially homeowners keys",
         "house key copy made",
-        "office keys first day",
-        "accidentally used the wrong key"
+        "accidentally used wrong key",
+        "new home keys first day"
       ]
     },
     {
       "name": "google_reddit",
       "category": "google",
       "queries": [
+        "site:reddit.com \"got the keys\" new home OR house",
         "site:reddit.com/r/mildlyinteresting key photo",
-        "site:reddit.com \"my keys\" -\"lost my keys\" -\"locked out\"",
-        "site:reddit.com \"got my keys\" OR \"new keys\" OR \"house keys\" photo",
-        "site:reddit.com \"key\" \"first day\" photo",
-        "site:reddit.com/r/pics house key photo"
-      ]
-    },
-    {
-      "name": "google_linkedin",
-      "category": "google",
-      "queries": [
-        "site:linkedin.com \"got my keys\" OR \"received my keys\" OR \"new office keys\"",
-        "site:linkedin.com \"first day\" keys photo",
-        "site:linkedin.com \"handed the keys\" OR \"here are my keys\"",
-        "site:linkedin.com \"new home\" keys -stock"
-      ]
-    },
-    {
-      "name": "google_twitter",
-      "category": "google",
-      "queries": [
-        "site:twitter.com \"my keys\" photo -lost -found",
-        "site:x.com \"new keys\" pic.twitter.com",
-        "site:twitter.com \"got the keys\" pic.twitter"
+        "site:reddit.com \"closing day\" keys",
+        "site:reddit.com \"new apartment keys\" OR \"house keys\" photo",
+        "site:reddit.com \"officially homeowners\""
       ]
     },
     {
@@ -51,16 +92,7 @@
       "queries": [
         "site:imgur.com key house OR door OR office",
         "site:flickr.com \"house key\" OR \"door key\" photo",
-        "site:postimg.cc key photograph",
         "\"duplicate key\" OR \"spare key\" photo filetype:jpg -site:shutterstock.com -site:getty.com"
-      ]
-    },
-    {
-      "name": "google_metadata",
-      "category": "metadata",
-      "queries": [
-        "filetype:jpg \"key\" exif GPS",
-        "filetype:jpg inurl:key -background -wallpaper -icon"
       ]
     }
   ]
